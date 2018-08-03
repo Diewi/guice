@@ -155,7 +155,8 @@ public final class ProviderMethodsModule implements Module {
             continue;
           }
           // now we know matching signature is in a subtype of method.getDeclaringClass()
-          if (overrides(matchingSignature, method)) {
+          if (!isClassGeneratedByGuice(matchingSignature.getDeclaringClass())
+              && overrides(matchingSignature, method)) {
             String annotationString =
                 provider.getAnnotation().annotationType() == Provides.class
                     ? "@Provides"
@@ -198,6 +199,10 @@ public final class ProviderMethodsModule implements Module {
     }
     return annotation;
   }
+
+  private boolean isClassGeneratedByGuice(Class<?> clazz){
+    return clazz.getSimpleName().contains("$EnhancerByGuice$");
+  } 
 
   private static final class Signature {
     final Class<?>[] parameters;

@@ -17,6 +17,7 @@
 package com.google.inject;
 
 import static com.google.inject.matcher.Matchers.only;
+import static org.junit.Assert.assertNotEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -25,6 +26,10 @@ import com.google.common.collect.Lists;
 import com.google.inject.matcher.AbstractMatcher;
 import com.google.inject.matcher.Matchers;
 import com.google.inject.spi.ConstructorBinding;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
@@ -436,5 +441,72 @@ public class MethodInterceptionTest extends TestCase {
           });
       return null;
     }
+  }
+
+  // // Overiding a ProvidesMethod due to method interception (AOP) shall be allowed.
+  // public void testOverrideProviderMethod_methodInterception() {
+  //   class Interceptor implements MethodInterceptor {
+  //     @Override
+  //     public IntegerWrapper invoke(MethodInvocation invocation) throws Throwable {
+  //       return new IntegerWrapper(1);
+  //     }
+  //   }
+  //   class InterceptModule implements Module {
+  //     public void configure(Binder binder) {
+  //       binder.bindInterceptor(Matchers.subclassesOf(ProvidedClassModule.class),
+  //           Matchers.annotatedWith(InterceptProvidesMethod.class), new Interceptor());
+  //     }
+  //   }
+  //   Injector injector = null;
+  //   try { 
+  //     injector = Guice.createInjector(new InterceptModule());
+  //   } catch (CreationException e) {
+  //     fail("Could not create an injector where a method is intercepted.");
+  //   }
+  //   // Check standard interception of the parent injector.
+  //   assertNotEquals("The injector where a method is intercepted is null.", injector, null);
+  //   // Create an instance of the class with the rovidesMethod such that the returned instance
+  //   // is a wrapped class containing the interception blocks.
+  //   // It can be used in a child injector (or another isolated one).
+  //   ProvidedClassModule instanceOfProvider = injector.getInstance(ProvidedClassModule.class);
+  //   assertEquals(1, instanceOfProvider.originalProviderMethod().getInternalInteger().intValue());
+  //   Injector childInjector = null;
+  //   try { 
+  //     childInjector = injector.createChildInjector(instanceOfProvider);
+  //   } catch (CreationException e) {
+  //     e.printStackTrace();
+  //     fail("Could not create an child injector where a ProvidesMethod is intercepted.");
+  //   }
+  //   // Check whether the provides method was intercepted.
+  //   IntegerWrapper providedValue = childInjector.getInstance(IntegerWrapper.class);
+  //   assertEquals(1, providedValue.getInternalInteger().intValue());    
+  //   assertNotEquals("The ProvidesMethod 'originalProviderMethod' was not intercepted.",
+  //       providedValue.getInternalInteger().intValue(), 2);
+  // }
+}
+
+// Used to test intercepting providesmethods.
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+@interface InterceptProvidesMethod {
+}
+
+class IntegerWrapper{
+  private Integer internalInteger;
+
+  public IntegerWrapper(Integer integer) {
+    internalInteger = integer;
+  }
+
+  public Integer getInternalInteger() {
+    return internalInteger;
+  } 
+}
+
+class ProvidedClassModule extends AbstractModule {
+  @Provides
+  @InterceptProvidesMethod
+  public IntegerWrapper originalProviderMethod() {
+    return new IntegerWrapper(2);
   }
 }
